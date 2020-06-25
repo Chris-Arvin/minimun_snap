@@ -1,2 +1,4 @@
 # minimun_snap
-rrt + minimum snap来生成轨迹
+rrt生成路径点；
+minimum snap生成轨迹；
+用tkinter做可视化
