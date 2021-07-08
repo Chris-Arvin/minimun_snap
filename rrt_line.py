@@ -1,75 +1,16 @@
-'''
-rrt_pot_v1.py___update log
-updated from rrt_connect(bidirectional):
-1. add mk_range_dir(), this function is to make a directionary to help spring in the fixed arc
-2. change spring and extend to fit the new function
 
-rrt_pot_v2.py___update log:
-updated from rrt_pot:
-1. gather the function into a class
 
-rrt_pot_v3.py___update log:
-updated from rrt_pot_v2:
-1. change the arc_directinoary to just check whether the new sample is in the arc
+# 注意：用tkinter画图时，是【x，y】，而我们在生成node时用的是【row，col】；有一个转置的问题
+# cv中用的是【row，col】
 
-rrt_pot_v4--v6.py___update log:
-updated from rrt_pot_v3:
-1. change the check collision methods and extend method(from 2 to 1)；
-2. add the process when spring a new node, update the nearest nodes in a circle
-
-rrt_pot_v7.py___update log:
-updated from rrt_pot_v6:
-1. fully change the bidirectional RRT/RRT
-
-rrt_pot_v8.py___update log:
-updated from rrt_pot v7:
-combine 2 springs to 1, choose the tree with less nodes, and link derictly the other tree
-
-rrt_pot_v9_without middle lines.py___update log:
-updated from rrt_pot_v8:
-1. just remove lines drawn in the process
-2. figure out the checking collisions problem
-3. add an optimal function
-4. instructions: 迭代了50次，时间大概在0.5s，输入起终点，输出为途径的点；接下来可以在采样方式、update、运动约束、轨迹优化上搞一搞
-
-rrt_pot_v10___update log:
-updated from rrt_pot_v9_without_middle_lins.py:
-1. now we try to draw collisions in the map
-2. by randomly selecting lots of collisions, we can say the algorithm is right and highly efficiency
-
-w_rrt_pot_v1___update log:
-updated from rrt_pot_v10:
-1. change how to check collisions
-2. add a time limitation to shut down new extend in advance
-3. problems:狭小空间的计算时间明显太长；
-
-w_rrt_pot_v2___update log:
-updated from w_rrt_pot_v1:
-1. add an dilated collision map
-
-w_rrt_pot_v3___update log:
-updated from w_rrt_pot_v2:
-1. change choose parent method,from comparing the distance between two nodes to compare the distance from the node to the start
-2. add rewire
-3. now our problems:采样方式的改进，运动约束，轨迹优化，局部最优解的问题
-
-rrt_line___update log:
-updated from w_rrt_pot_v3_no_pic:
-1. do not make the window exist internally
-2. link with rrt_crooked,we can draw collisions and see the crooked picture
-'''
-
-#注意：用tkinter画图时，是【x，y】，而我们在生成node时用的是【row，col】；有一个转置的问题
-#cv中用的是【row，col】
-
+# import cv2 as cv
 import numpy as np
 import tkinter as tk
 import time
-#由于ROS系统的影响，cv2安装时会有一些#的处理，导致python3.5找不到他，加入下面这两行就可以解决了
-#很奇怪，如果我本次开机后，没有启动过ros相关的文件，就需要注释掉； 如果启动过，就不用注释
-import sys
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
-import cv2 as cv
+# 由于ROS系统的影响，cv2安装时会有一些#的处理，导致python3.5找不到他，加入下面这两行就可以解决了
+# 很奇怪，如果我本次开机后，没有启动过ros相关的文件，就需要注释掉； 如果启动过，就不用注释
+# import sys
+# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 
 # each node has varieties:row,col,father
@@ -78,15 +19,16 @@ class node:
         self.row = r
         self.col = c
         self.father = f
-        self.distance=0
-        father=self.father
+        self.distance = 0
+        father = self.father
         while True:
             if father == None:
                 break
-            self.distance+=np.sqrt((r-father.row)**2+(c-father.col)**2)
-            r=father.row
-            c=father.col
-            father=father.father
+            self.distance += np.sqrt((r-father.row)**2+(c-father.col)**2)
+            r = father.row
+            c = father.col
+            father = father.father
+
 
 class rrt:
     # initial the start, end, map
@@ -102,8 +44,8 @@ class rrt:
 
         self.start = node(50, 50, None)
         self.end = node(700, 520, None)
-        self.map = np.zeros([self.height,self.width])
-        self.col_map=np.zeros([self.height,self.width])
+        self.map = np.zeros([self.height, self.width])
+        self.col_map = np.zeros([self.height, self.width])
         self.Co = []
 
         # node list
@@ -118,7 +60,7 @@ class rrt:
         self.less_long_path = np.inf
         self.last_path_length = np.inf
         self.path_all = []
-        self.is_robot=False
+        self.is_robot = False
         self.init_robot()
 
     # initialize robot, change collisions and bounders
@@ -130,24 +72,28 @@ class rrt:
     def init_map(self):
 
         # initialize canvas
-        self.canvas = tk.Canvas(self.window, bg='white', height=self.height, width=self.width)
+        self.canvas = tk.Canvas(self.window, bg='white',
+                                height=self.height, width=self.width)
         self.canvas.place(x=0, y=0, anchor='nw')
         self.canvas.create_oval(self.start.col - 2, self.start.row - 2, self.start.col + 2, self.start.row + 2,
                                 fill='red')
-        self.canvas.create_oval(self.end.col - 2, self.end.row - 2, self.end.col + 2, self.end.row + 2, fill='red')
-        #mouse reaction
+        self.canvas.create_oval(
+            self.end.col - 2, self.end.row - 2, self.end.col + 2, self.end.row + 2, fill='red')
+        # mouse reaction
         self.canvas.bind("<ButtonPress-1>", self.on_button_press)
         self.canvas.bind("<B1-Motion>", self.on_move_press)
         self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
-        #button
-        self.b1=tk.Button(self.window,text='collisions',command=self.add_collision)
-        self.b2=tk.Button(self.window,text='go',command=self.button_reaction)
-        self.b1.place(x=200,y=820,anchor='nw')
-        self.b2.place(x=400,y=820,anchor='nw')
+        # button
+        self.b1 = tk.Button(self.window, text='collisions',
+                            command=self.add_collision)
+        self.b2 = tk.Button(self.window, text='go',
+                            command=self.button_reaction)
+        self.b1.place(x=200, y=820, anchor='nw')
+        self.b2.place(x=400, y=820, anchor='nw')
         tk.mainloop()
 
-
     # add collisions
+
     def add_collision(self):
         for i in self.Co:
             self.canvas.create_rectangle(i[0], i[1], i[2], i[3], fill='black')
@@ -158,48 +104,50 @@ class rrt:
                 i[1] = max(0, i[1] - self.robot_R)
                 i[2] = min(self.width, i[2] + self.robot_R)
                 i[3] = min(self.height, i[3] + self.robot_R)
-        #add bounder limitation
+        # add bounder limitation
         for i in range(self.width):
-            self.col_map[i][0]=255
-            self.col_map[i][self.height-1]=255
+            self.col_map[i][0] = 255
+            self.col_map[i][self.height-1] = 255
         for j in range(self.height):
-            self.col_map[0][j]=255
-            self.col_map[self.width-1][j]=255
-        #filter
-        map=np.array(self.col_map)
-        kernel = np.zeros([2*self.robot_R+1,2*self.robot_R+1])
-        for i in range(2*self.robot_R+1):
-            for j in range(2*self.robot_R+1):
-                if (i-self.robot_R)**2+(j-self.robot_R)**2<=self.robot_R**2:
-                    kernel[i][j]=1
-        self.col_map=cv.filter2D(src=map,ddepth=1,kernel=kernel)
+            self.col_map[0][j] = 255
+            self.col_map[self.width-1][j] = 255
+        # filter
+        # map = np.array(self.col_map)
+        # kernel = np.zeros([2*self.robot_R+1, 2*self.robot_R+1])
+        # for i in range(2*self.robot_R+1):
+        #     for j in range(2*self.robot_R+1):
+        #         if (i-self.robot_R)**2+(j-self.robot_R)**2 <= self.robot_R**2:
+        #             kernel[i][j] = 1
+        # self.col_map = cv.filter2D(src=map, ddepth=1, kernel=kernel)
 
     def button_reaction(self):
         self.find_path()
 
-    #draw collisions
-    def on_button_press(self,event):
+    # draw collisions
+    def on_button_press(self, event):
         # save mouse drag start position
         self.start_x = event.x
         self.start_y = event.y
-        self.rect = self.canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y, fill="black")
+        self.rect = self.canvas.create_rectangle(
+            self.start_x, self.start_y, self.start_x, self.start_y, fill="black")
 
-    def on_move_press(self,event):
+    def on_move_press(self, event):
         self.curX, self.curY = (event.x, event.y)
 
         # expand rectangle as you drag the mouse
-        self.canvas.coords(self.rect, self.start_x, self.start_y, self.curX, self.curY)
+        self.canvas.coords(self.rect, self.start_x,
+                           self.start_y, self.curX, self.curY)
 
-    def on_button_release(self,event):
-        c=[self.start_x,self.start_y,self.curX,self.curY]
-        for y in range(self.start_y,self.curY):
-            for x in range(self.start_x,self.curX):
-                self.col_map[x][y]=255
-        print('New collision:',c)
+    def on_button_release(self, event):
+        c = [self.start_x, self.start_y, self.curX, self.curY]
+        for y in range(self.start_y, self.curY):
+            for x in range(self.start_x, self.curX):
+                self.col_map[x][y] = 255
+        print('New collision:', c)
         self.Co.append(c)
 
-
     # figure out the nearest node
+
     def spring(self, flag, mk_dir_flag=1):
         new_r = int(self.height * np.random.rand())
         new_c = int(self.width * np.random.rand())
@@ -212,9 +160,9 @@ class rrt:
             new_c = int(self.width * np.random.rand())
 
         if flag == 2:
-            aa=self.list1.copy()
-            self.list1=self.list2.copy()
-            self.list2=aa.copy()
+            aa = self.list1.copy()
+            self.list1 = self.list2.copy()
+            self.list2 = aa.copy()
         # "Near". find rule:only the distance
         min_node = 1000000
         temp_node = node()
@@ -235,8 +183,10 @@ class rrt:
             new_node = node(new_r, new_c, temp_node)
 
         else:
-            add_row = (new_r - temp_node.row) * self.step_size / distance + temp_node.row
-            add_col = (new_c - temp_node.col) * self.step_size / distance + temp_node.col
+            add_row = (new_r - temp_node.row) * \
+                self.step_size / distance + temp_node.row
+            add_col = (new_c - temp_node.col) * \
+                self.step_size / distance + temp_node.col
             new_node = node(add_row, add_col, temp_node)
 
         # rewire
@@ -251,12 +201,13 @@ class rrt:
                     temp.distance=distance+new_node.distance
         '''
 
-
         # check collision the second time: whether the path is in the collision!
-        col = np.linspace(temp_node.col, new_node.col, int(self.step_size ), endpoint=True)
-        row = np.linspace(temp_node.row, new_node.row, int(self.step_size ), endpoint=True)
+        col = np.linspace(temp_node.col, new_node.col,
+                          int(self.step_size), endpoint=True)
+        row = np.linspace(temp_node.row, new_node.row,
+                          int(self.step_size), endpoint=True)
         for j in range(min(len(col), len(row))):
-            if self.col_map[int(col[j])][int(row[j])]>100:
+            if self.col_map[int(col[j])][int(row[j])] > 100:
                 if flag == 2:
                     aa = self.list1.copy()
                     self.list1 = self.list2.copy()
@@ -290,15 +241,19 @@ class rrt:
         if distance <= self.step_size:
             new_node2 = node(new_node.row, new_node.col, temp_node)
         else:
-            add_row = (new_node.row - temp_node.row) * self.step_size / distance + temp_node.row
-            add_col = (new_node.col - temp_node.col) * self.step_size / distance + temp_node.col
+            add_row = (new_node.row - temp_node.row) * \
+                self.step_size / distance + temp_node.row
+            add_col = (new_node.col - temp_node.col) * \
+                self.step_size / distance + temp_node.col
             new_node2 = node(add_row, add_col, temp_node)
 
         # check collision: whether the path is in the collision!
-        col = np.linspace(temp_node.col, new_node2.col, int(self.step_size ), endpoint=True)
-        row = np.linspace(temp_node.row, new_node2.row, int(self.step_size ), endpoint=True)
+        col = np.linspace(temp_node.col, new_node2.col,
+                          int(self.step_size), endpoint=True)
+        row = np.linspace(temp_node.row, new_node2.row,
+                          int(self.step_size), endpoint=True)
         for j in range(min(len(col), len(row))):
-            if self.col_map[int(col[j])][int(row[j])]>100:
+            if self.col_map[int(col[j])][int(row[j])] > 100:
                 if flag == 2:
                     aa = self.list1.copy()
                     self.list1 = self.list2.copy()
@@ -322,17 +277,22 @@ class rrt:
             return True
         else:
             while True:
-                distance = np.sqrt((new_node2.col - new_node.col) ** 2 + (new_node2.row - new_node.row) ** 2)
+                distance = np.sqrt((new_node2.col - new_node.col)
+                                   ** 2 + (new_node2.row - new_node.row) ** 2)
                 if distance <= self.step_size:
                     new_node3 = node(new_node.row, new_node.col, new_node2)
                 else:
-                    add_row = (new_node.row - new_node2.row) * self.step_size / distance + new_node2.row
-                    add_col = (new_node.col - new_node2.col) * self.step_size / distance + new_node2.col
+                    add_row = (new_node.row - new_node2.row) * \
+                        self.step_size / distance + new_node2.row
+                    add_col = (new_node.col - new_node2.col) * \
+                        self.step_size / distance + new_node2.col
                     new_node3 = node(add_row, add_col, new_node2)
 
                 # check collision the second time: whether the path is in the collision!
-                col = np.linspace(new_node2.col, new_node3.col, int(self.step_size ), endpoint=True)
-                row = np.linspace(new_node2.row, new_node3.row, int(self.step_size ), endpoint=True)
+                col = np.linspace(new_node2.col, new_node3.col,
+                                  int(self.step_size), endpoint=True)
+                row = np.linspace(new_node2.row, new_node3.row,
+                                  int(self.step_size), endpoint=True)
                 for j in range(min(len(col), len(row))):
                     if self.col_map[int(col[j])][int(row[j])] > 100:
                         if flag == 2:
@@ -359,15 +319,14 @@ class rrt:
                 # 更换new_node2，进行迭代
                 new_node2 = new_node3
 
-
-
     # end requirement,返回的是能连接两个tree，且使得总长度最小的两个点
+
     def end_limitation(self):
-        #t1,t2是两个可连接的节点
+        # t1,t2是两个可连接的节点
         t1 = None
         t2 = None
         path_all_length = np.inf
-        #list1和list2是两个tree
+        # list1和list2是两个tree
         for temp1 in self.list1:
             for temp2 in self.list2:
                 dis = np.inf
@@ -388,7 +347,8 @@ class rrt:
                         dis += np.sqrt(
                             (temp_node.row - temp_node.father.row) ** 2 + (temp_node.col - temp_node.father.col) ** 2)
                         temp_node = temp_node.father
-                    dis += np.sqrt((temp1.row - temp2.row) ** 2 + (temp1.col - temp2.col) ** 2)
+                    dis += np.sqrt((temp1.row - temp2.row) **
+                                   2 + (temp1.col - temp2.col) ** 2)
                 if dis < path_all_length:
                     t1 = temp1
                     t2 = temp2
@@ -398,16 +358,16 @@ class rrt:
 
     # expend nodes, flag is to figure whether to limit the new springed node's position
     def extend(self, flag=0):
-        #如果extend的时间较大，大概率是因为此路径无法再优化了（椭圆内障碍物太多），这时直接退出就可以了;
-        #如果前后两次路径的差值小于1，则已收敛了
-        self.is_success=True
+        # 如果extend的时间较大，大概率是因为此路径无法再优化了（椭圆内障碍物太多），这时直接退出就可以了;
+        # 如果前后两次路径的差值小于1，则已收敛了
+        self.is_success = True
         while True:
-            now=time.time()
-            if now-self.t_s>10:
+            now = time.time()
+            if now-self.t_s > 10:
                 print('no path')
                 exit()
             if abs(self.last_path_length - self.less_long_path) < 1 and len(
-                    self.path_all) > 1 and self.last_path_length != self.less_long_path or now-self.t_s>0.5 and len(self.path_all)>0:
+                    self.path_all) > 1 and self.last_path_length != self.less_long_path or now-self.t_s > 0.5 and len(self.path_all) > 0:
                 self.is_success = False
                 return 0
             # if now-self.t_s>0.5 and len(self.path_all)>0:
@@ -415,10 +375,10 @@ class rrt:
             #     return 0
             # consistently spring up new node until meet end requirement
             # spring the tree first which has less nodes
-            if len(self.list1)<=len(self.list2):
-                is_success=self.spring(1, flag)
+            if len(self.list1) <= len(self.list2):
+                is_success = self.spring(1, flag)
             else:
-                is_success=self.spring(2, flag)
+                is_success = self.spring(2, flag)
             if is_success:
                 temp = self.end_limitation()
                 if temp != False:
@@ -445,7 +405,7 @@ class rrt:
 
         # t_e = time.time()
         # print('搜索时间为:', t_e - self.t_s)
-        self.last_path_length=self.path_length
+        self.last_path_length = self.path_length
         # 如果新生成的路径长度小于原来的长度，则绘出
         if self.path_length <= self.less_long_path:
             self.less_long_path = self.path_length
@@ -464,30 +424,32 @@ class rrt:
         self.list2.append(self.end)
         self.extend(flag=1)
 
-    #optimal path
-    def optim_path(self,path):
-        if len(path)>3:
-            t=0
+    # optimal path
+    def optim_path(self, path):
+        if len(path) > 3:
+            t = 0
             while True:
-                flag=True
-                temp1=path[t]
-                temp3=path[t+2]
+                flag = True
+                temp1 = path[t]
+                temp3 = path[t+2]
                 # check collision the second time: whether the path is in the collision!
-                col = np.linspace(temp1.col, temp3.col, int(self.step_size), endpoint=True)
-                row = np.linspace(temp1.row, temp3.row, int(self.step_size), endpoint=True)
+                col = np.linspace(temp1.col, temp3.col, int(
+                    self.step_size), endpoint=True)
+                row = np.linspace(temp1.row, temp3.row, int(
+                    self.step_size), endpoint=True)
                 for j in range(min(len(col), len(row))):
                     if self.col_map[int(col[j])][int(row[j])] > 100:
-                        flag=False
+                        flag = False
                 if flag:
                     path.pop(t+1)
                 else:
-                    t+=1
+                    t += 1
                 if temp3 == path[-1]:
                     break
         return path
 
-
     # when make it, go back to find the relavently low cost path
+
     def results(self, temp_all):
         # create the path list from start node to temp_all[0]
         temp = temp_all[0]
@@ -510,32 +472,33 @@ class rrt:
             temp = temp.father
             res.append(temp)
         # return the full path
-        res=self.optim_path(res)
+        res = self.optim_path(res)
         return res
 
-    #consistently extend
+    # consistently extend
     def find_path(self):
         self.t_ss = time.time()
-        self.t_s=time.time()
+        self.t_s = time.time()
         self.extend()
-        #终止条件为迭代100次
-        #提前结束条件为：有成功路径且搜索时间超过1s/某次搜索的时间过长/路径长度收敛
+        # 终止条件为迭代100次
+        # 提前结束条件为：有成功路径且搜索时间超过1s/某次搜索的时间过长/路径长度收敛
         for i in range(100):
-            if time.time()-self.t_ss>1 and len(self.path_all)>0:
+            if time.time()-self.t_ss > 1 and len(self.path_all) > 0:
                 break
-            if self.is_success==False:
+            if self.is_success == False:
                 break
             # time.sleep(1)
             self.t_s = time.time()
             # self.init_map()
             self.update_path()
-            self.t_e=time.time()
-            print('第%d次迭代的路径长度为：'%(i+1), self.path_length,'时间为：',self.t_e-self.t_s)
+            self.t_e = time.time()
+            print('第%d次迭代的路径长度为：' %
+                  (i+1), self.path_length, '时间为：', self.t_e-self.t_s)
         # self.init_map()
         self.path_end = self.path_all[-1]
-        self.path_xy=[]
+        self.path_xy = []
         for i in self.path_end:
-            self.path_xy.append([i.col,i.row])
+            self.path_xy.append([i.col, i.row])
         self.window.destroy()
         print('最优路径长度为：', self.less_long_path)
         t_ee = time.time()
@@ -544,8 +507,6 @@ class rrt:
         print(self.path_xy)
 
 
-
 if __name__ == '__main__':
     rrt_agent = rrt()
     rrt_agent.init_map()
-
