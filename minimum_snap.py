@@ -35,38 +35,30 @@ class minimum_snap:
         self.y = []
 
     def G_constrain(self):
-        self.G = np.zeros([len(self.t_to)*2, (len(self.t_to)-1)*6])
+        self.G = np.zeros([(len(self.t_to)-2)*2, (len(self.t_to)-1)*6])
         # print(len(self.G), len(self.G[0]))
         # 前面是<=，后面是>=
-        for i in range(len(self.t_to)):
-            if i == len(self.t_to)-1:
-                i -= 1
+        for i in range(len(self.t_to)-2):
             self.G[i][i*6+0] = 1
-            self.G[i][i*6+1] = self.t_to[i]
-            self.G[i][i*6+2] = self.t_to[i]**2
-            self.G[i][i*6+3] = self.t_to[i]**3
-            self.G[i][i*6+4] = self.t_to[i]**4
-            self.G[i][i*6+5] = self.t_to[i]**5
-        for i in range(len(self.t_to)):
-            if i == len(self.t_to)-1:
-                i -= 1
-            self.G[i+len(self.t_to)][i*6+0] = -1
-            self.G[i+len(self.t_to)][i*6+1] = -self.t_to[i]
-            self.G[i+len(self.t_to)][i*6+2] = -self.t_to[i]**2
-            self.G[i+len(self.t_to)][i*6+3] = -self.t_to[i]**3
-            self.G[i+len(self.t_to)][i*6+4] = -self.t_to[i]**4
-            self.G[i+len(self.t_to)][i*6+5] = -self.t_to[i]**5
+            self.G[i][i*6+1] = self.t_to[i+1]
+            self.G[i][i*6+2] = self.t_to[i+1]**2
+            self.G[i][i*6+3] = self.t_to[i+1]**3
+            self.G[i][i*6+4] = self.t_to[i+1]**4
+            self.G[i][i*6+5] = self.t_to[i+1]**5
+        for i in range(len(self.t_to)-2):
+            for j in range((len(self.t_to)-1)*6):
+                self.G[i+len(self.t_to)-2][j] = -self.G[i][j]
 
         # 找到bounds
         lefts, rights, ups, downs = find_bounds(rrt_agent.col_map, path_list)
-        self.hx = np.zeros([len(self.t_to)*2, 1])
-        self.hy = np.zeros([len(self.t_to)*2, 1])
+        self.hx = np.zeros([(len(self.t_to)-2)*2, 1])
+        self.hy = np.zeros([(len(self.t_to)-2)*2, 1])
         # 前后面<=的，后面是>=的，注意正负号
-        for i in range(len(lefts)):
-            self.hx[i] = rights[i]
-            self.hx[i+len(self.t_to)] = -lefts[i]
-            self.hy[i] = downs[i]
-            self.hx[i+len(self.t_to)] = -ups[i]
+        for i in range(len(lefts)-2):
+            self.hx[i] = rights[i+1]
+            self.hx[i+len(self.t_to)-2] = -lefts[i+1]
+            self.hy[i] = ups[i+1]
+            self.hy[i+len(self.t_to)-2] = -downs[i+1]
 
     # 计算到每一个node的时间self.t_to
 
@@ -224,6 +216,12 @@ class minimum_snap:
 
         p_x = matrix(self.p_x)
         hx = matrix(self.hx)
+        print('-'*30)
+        print(len(G))
+        print(G)
+        print('-'*30)
+        print(len(hx))
+        print(hx)
         result_x = solvers.qp(P=Q_all, q=q, A=M, b=p_x, G=G, h=hx)
 
         p_y = matrix(self.p_y)
@@ -241,7 +239,7 @@ class minimum_snap:
         # 调整后的waypoints
         global final_waypoints
         final_waypoints = []
-
+        flag = 0
         # 将每个片段离散成10个点，如果collision，则把两点的中点添加到list中
         for t_a in range(len(self.t_to) - 1):
             time_list = np.linspace(
@@ -264,12 +262,19 @@ class minimum_snap:
                     final_waypoints.append([np.dot(np.transpose(m), lama_x)[
                                            0][0], np.dot(np.transpose(m), lama_y)[0][0]])
                 if int(np.dot(np.transpose(m), lama_x)[0][0]) >= len(rrt_agent.col_map) or int(np.dot(np.transpose(m), lama_x)[0][0]) < 0 or int(np.dot(np.transpose(m), lama_y)[0][0]) >= len(rrt_agent.col_map[0]) or int(np.dot(np.transpose(m), lama_y)[0][0]) < 0 or rrt_agent.col_map[int(np.dot(np.transpose(m), lama_x)[0][0])][int(np.dot(np.transpose(m), lama_y)[0][0])] > LEVEL:
+                    print(np.dot(np.transpose(m), lama_x)[0][0])
+                    print(np.dot(np.transpose(m), lama_y)[0][0])
+                    print(rrt_agent.col_map[int(np.dot(np.transpose(m), lama_x)[
+                          0][0])][int(np.dot(np.transpose(m), lama_y)[0][0])])
                     l = path_list.copy()
                     # 被插入的中间点
                     b1 = int((path_list[t_a][0] + path_list[t_a + 1][0]) / 2)
                     b2 = int((path_list[t_a][1] + path_list[t_a + 1][1]) / 2)
                     l.insert(t_a + 1, [b1, b2])
-                    return False, l
+                    flag = 1
+        if flag == 1:
+            # draw()
+            return False, l
         # print('-'*60)
         # print('x:')
         # print(self.x)
@@ -309,16 +314,28 @@ def draw():
 
 def find_bounds(col_map, path_list):
     # 为每个路径点寻找边界
+    temp_col_map = col_map.copy()
     lefts = []
     rights = []
     ups = []
     downs = []
+    print('-'*30, 'bound,l,r,u,d')
     for i, point in enumerate(path_list):
-        if i == 0 or i == len(path_list)-1:
-            bound = find_bound(col_map, point[0], point[1], 1)
+        if i == 0:
+            temp_col_map[int(path_list[i+1][0])
+                         ][int(path_list[i+1][1])] = LEVEL+1
+            bound = find_bound(temp_col_map, path_list, point[0], point[1], 1)
+        elif i == len(path_list)-1:
+            temp_col_map[int(path_list[i-1][0])
+                         ][int(path_list[i-1][1])] = LEVEL+1
+            bound = find_bound(temp_col_map, path_list, point[0], point[1], 1)
         else:
-            bound = find_bound(col_map, point[0], point[1], 0)
-        # print(bound)
+            temp_col_map[int(path_list[i-1][0])
+                         ][int(path_list[i-1][1])] = LEVEL+1
+            temp_col_map[int(path_list[i+1][0])
+                         ][int(path_list[i+1][1])] = LEVEL+1
+            bound = find_bound(temp_col_map, path_list, point[0], point[1], 0)
+        print(point, '; ', bound)
         lefts.append(bound[0])
         rights.append(bound[1])
         ups.append(bound[2])
@@ -326,7 +343,7 @@ def find_bounds(col_map, path_list):
     return lefts, rights, ups, downs
 
 
-def find_bound(col_map, px, py, endpoint=0):
+def find_bound(col_map, path_list, px, py, endpoint=0):
     max_setoff = 20
     # 起点和终点 不允许移动
     if endpoint == 1:
@@ -337,29 +354,41 @@ def find_bound(col_map, px, py, endpoint=0):
     left = px-max_setoff
     right = px+max_setoff
     # 向内缩减bounds
-    for i in range(0, max_setoff):
+    for i in range(0, int(max_setoff)):
         j = max_setoff-i
         # 边界约束
         if py-j >= 0:
             for i in range(-int(max_setoff/2), int(max_setoff/2)+1):
                 # 边界约束
-                if px+i < 0 or px+i >= len(col_map):
+                if px+i < 0:
+                    up = 0
                     continue
-                if col_map[int(round(px+i))][int(round(py-j))] > LEVEL:
+                if px+i >= len(col_map):
+                    up = len(col_map)-1
+                    continue
+                if col_map[int(round(px+i))][int(round(py+j))] > LEVEL:
                     # 如果有碰撞，则bounds大小一定小于j
-                    up = py-(j-1)
+                    up = py+(j-1)
                     break
         if py+j < len(col_map[0]):
             for i in range(-int(max_setoff/2), int(max_setoff/2)+1):
-                if px+i < 0 or px+i >= len(col_map):
+                if px+i < 0:
+                    down = 0
                     continue
-                if col_map[int(round(px+i))][int(round(py+j))] > LEVEL:
-                    down = py + (j-1)
+                if px+i >= len(col_map):
+                    down = len(col_map)-1
+                    continue
+                if col_map[int(round(px+i))][int(round(py-j))] > LEVEL:
+                    down = py - (j-1)
                     break
 
         if px-j >= 0:
             for i in range(-int(max_setoff/2), int(max_setoff/2)+1):
-                if py+i < 0 or py+i >= len(col_map[0]):
+                if px+i < 0:
+                    left = 0
+                    continue
+                if px+i >= len(col_map[0]):
+                    left = len(col_map[0])-1
                     continue
                 if col_map[int(round(px-j))][int(round(py+i))] > LEVEL:
                     left = px-(j-1)
@@ -367,11 +396,27 @@ def find_bound(col_map, px, py, endpoint=0):
 
         if px+j < len(col_map):
             for i in range(-int(max_setoff/2), int(max_setoff/2)+1):
-                if py+i < 0 or py+i >= len(col_map[0]):
+                if px+i < 0:
+                    right = 0
+                    continue
+                if px+i >= len(col_map[0]):
+                    right = len(col_map[0])-1
                     continue
                 if col_map[int(round(px+j))][int(round(py+i))] > LEVEL:
                     right = px+(j-1)
                     break
+    # 点的相对位置方向不应该发生改变
+    for p in path_list:
+        if p[0] == px and p[1] == py:
+            continue
+        if p[0] > left and p[0] <= px:
+            left = p[0]
+        if p[0] < right and p[0] >= px:
+            right = p[0]
+        if p[1] > up and p[1] <= py:
+            up = p[1]
+        if p[1] < down and p[1] >= py:
+            down = p[1]
 
     return [left, right, up, down]
 
@@ -386,12 +431,6 @@ if __name__ == '__main__':
     Dis_num = 20  # 每个多项式离散的点的个数
     LEVEL = 50  # 障碍物分界线
     n = 5
-    while True:
-        k = len(path_list) - 1
-        Fig_class = minimum_snap(path_list)
-        is_success, path_list = Fig_class.figure_out()
-        if is_success:
-            break
 
     # 这里是画图部分，无所谓
     window = tk.Tk()
@@ -401,4 +440,12 @@ if __name__ == '__main__':
     b = tk.Button(window, text='draw', command=draw)
     canvas.place(x=0, y=0, anchor='nw')
     b.place(x=400, y=850, anchor='nw')
+
+    while True:
+        k = len(path_list) - 1
+        Fig_class = minimum_snap(path_list)
+        is_success, path_list = Fig_class.figure_out()
+        if is_success:
+            break
+
     window.mainloop()
