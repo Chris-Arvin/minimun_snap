@@ -19,13 +19,15 @@ class minimum_snap:
         self.path_list = path_list  # size = len(node)*2
         self.path_list_x = [x[0] for x in self.path_list]
         self.path_list_y = [y[1] for y in self.path_list]
-        self.Q_all = []
+        self.Q_curvature = []
+        self.Q_length = []
         self.p_x = []
         self.p_y = []
         self.M = []
 
         self.cal_time()
-        self.def_Q_all()
+        self.def_Q_curvature()
+        self.def_Q_length()
         self.p_constrain()
         self.M_constrain()
         self.G_constrain()
@@ -89,17 +91,31 @@ class minimum_snap:
         return q_temp
 
     # 计算全部的Q(目标函数中的Q)
-    def def_Q_all(self):
-        self.Q_all = np.zeros([k * (n + 1), k * (n + 1)])
+    def def_Q_curvature(self):
+        self.Q_curvature = np.zeros([k * (n + 1), k * (n + 1)])
         for i in range(k):
             q_temp = self.Q_temp(index=i + 1, length=6)
             num_q = i * (n + 1)
             for j in range(n + 1):
                 for u in range(n + 1):
-                    self.Q_all[num_q + j][num_q + u] = q_temp[j][u]  # 对角线那种添加
-        # print('Q_all is done:')
-        # print(self.Q_all.shape)
+                    self.Q_curvature[num_q + j][num_q + u] = q_temp[j][u]  # 对角线那种添加
+        # print('Q_curvature is done:')
+        # print(self.Q_curvature.shape)
         # print('-' * 60)
+
+    # 计算Q_length
+    def def_Q_length(self):
+        self.Q_length = np.zeros([k * (n + 1), k * (n + 1)])
+        for i in range(k*(n+1)):
+            if i==0:
+                self.Q_length[i][i] = 1
+                self.Q_length[i][i+1] = -1
+            elif i ==k*(n+1)-1:
+                self.Q_length[i][i-1] = -1
+            else:
+                self.Q_length[i][i] = 2
+                self.Q_length[i][i-1] = -1
+                self.Q_length[i][i+1] = -1
 
     # 起点终点的x v a的限制和中间点的x限制,这个是等式后面的部分.
     # 前3+k-1+3是对应的值，剩下的部分是0
@@ -208,9 +224,12 @@ class minimum_snap:
     # 计算结果
 
     def figure_out(self):
-        q = np.zeros([len(self.Q_all), 1])
+        q = np.zeros([len(self.Q_curvature), 1])
         q = matrix(q)
-        Q_all = matrix(self.Q_all)
+        Q_curvature = matrix(self.Q_curvature)
+        Q_length = matrix(self.Q_length)
+        w1 = 1
+        w2 = 1
         M = matrix(self.M)
         G = matrix(self.G)
 
@@ -222,11 +241,11 @@ class minimum_snap:
         print('-'*30)
         print(len(hx))
         print(hx)
-        result_x = solvers.qp(P=Q_all, q=q, A=M, b=p_x, G=G, h=hx)
+        result_x = solvers.qp(P=w1*Q_curvature+w2*Q_length, q=q, A=M, b=p_x, G=G, h=hx)
 
         p_y = matrix(self.p_y)
         hy = matrix(self.hy)
-        result_y = solvers.qp(P=Q_all, q=q, A=M, b=p_y, G=G, h=hy)
+        result_y = solvers.qp(P=w1*Q_curvature+w2*Q_length, q=q, A=M, b=p_y, G=G, h=hy)
 
         lama_x = result_x['x']
         lama_y = result_y['x']
