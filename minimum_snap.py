@@ -259,7 +259,6 @@ class minimum_snap:
         # 调整后的waypoints
         global final_waypoints
         final_waypoints = []
-        flag = 0
         # 将每个片段离散成10个点，如果collision，则把两点的中点添加到list中
         for t_a in range(len(self.t_to) - 1):
             time_list = np.linspace(
@@ -291,10 +290,7 @@ class minimum_snap:
                     b1 = int((path_list[t_a][0] + path_list[t_a + 1][0]) / 2)
                     b2 = int((path_list[t_a][1] + path_list[t_a + 1][1]) / 2)
                     l.insert(t_a + 1, [b1, b2])
-                    flag = 1
-        if flag == 1:
-            # draw()
-            return False, l
+                    return False, l
         # print('-'*60)
         # print('x:')
         # print(self.x)
