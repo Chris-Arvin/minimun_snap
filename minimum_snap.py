@@ -377,32 +377,55 @@ def find_bound(col_map, path_list, px, py, endpoint=0):
     down = int(py)
     left = int(px)
     right = int(px)
-
+    
+    flag_l=1
+    flag_r=1
+    flag_u=1
+    flag_d=1
     for i in range(max_setoff):
-        for yi in range(down,up+1):
-            if col_map[left-1][yi] > LEVEL:
-                break
-        else:
-            left -= 1
+        if flag_l:
+            for yi in range(int(down),int(up+1)):
+                if left-1<0:
+                    break
+                if col_map[int(left-1)][yi] > LEVEL:
+                    left -=0.5
+                    flag_l = 0
+                    break
+            else:
+                left -= 1
         
-        for xi in range(left,right+1):
-            if col_map[xi][up+1] > LEVEL:
-                break
-        else:
-            up += 1
+        if flag_u:
+            for xi in range(int(left),int(right+1)):
+                if up+1>=len(col_map):
+                    break
+                if col_map[xi][int(up+1)] > LEVEL:
+                    up+=0.5
+                    flag_u = 0
+                    break
+            else:
+                up += 1
         
-        for yi in range(down, up+1):
-            if col_map[right+1][yi] > LEVEL:
-                break
-        else:
-            right += 1
+        if flag_r:
+            for yi in range(int(down), int(up+1)):
+                if right+1>=len(col_map[0]):
+                    break
+                if col_map[int(right+1)][yi] > LEVEL:
+                    right+=0.5
+                    flag_r = 0
+                    break
+            else:
+                right += 1
         
-        for xi in range(left, right+1):
-            if col_map[xi][down-1] > LEVEL:
-                break
-        else:
-            down -= 1
-  
+        if flag_d:
+            for xi in range(int(left), int(right+1)):
+                if down-1<0:
+                    break
+                if col_map[xi][int(down-1)] > LEVEL:
+                    down-=0.5
+                    flag_d = 0
+                    break
+            else:
+                down -= 1
 
     # 点的相对位置方向不应该发生改变
     for p in path_list:
