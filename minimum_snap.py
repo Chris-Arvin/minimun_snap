@@ -105,19 +105,6 @@ class minimum_snap:
         # print('-' * 60)
 
     # 计算Q_length
-    # def def_Q_length(self):
-    #     self.Q_length = np.zeros([k * (n + 1), k * (n + 1)])
-    #     for i in range(k*(n+1)):
-    #         if i==0:
-    #             self.Q_length[i][i] = 1
-    #             self.Q_length[i][i+1] = -1
-    #         elif i ==k*(n+1)-1:
-    #             self.Q_length[i][i-1] = -1
-    #         else:
-    #             self.Q_length[i][i] = 2
-    #             self.Q_length[i][i-1] = -1
-    #             self.Q_length[i][i+1] = -1
-
     def def_Q_length(self):
         Q_length = np.zeros([k , k ])
         for i in range(k):
@@ -263,9 +250,6 @@ class minimum_snap:
         print('-'*30)
         print(len(hx))
         print(hx)
-        print(np.linalg.matrix_rank(Q_curvature), len(self.Q_curvature))
-        print(np.linalg.matrix_rank(Q_length))
-        print(np.linalg.matrix_rank(w1*Q_curvature+w2*Q_length))
         result_x = solvers.qp(P=w1*Q_curvature+w2*Q_length, q=q, A=M, b=p_x, G=G, h=hx)
 
         p_y = matrix(self.p_y)
@@ -304,7 +288,7 @@ class minimum_snap:
                 if j == 0 or j == time_list[-1]:
                     final_waypoints.append([np.dot(np.transpose(m), lama_x)[
                                            0][0], np.dot(np.transpose(m), lama_y)[0][0]])
-                if int(np.dot(np.transpose(m), lama_x)[0][0]) >= len(rrt_agent.col_map) or int(np.dot(np.transpose(m), lama_x)[0][0]) < 0 or int(np.dot(np.transpose(m), lama_y)[0][0]) >= len(rrt_agent.col_map[0]) or int(np.dot(np.transpose(m), lama_y)[0][0]) < 0 or rrt_agent.col_map[int(np.dot(np.transpose(m), lama_x)[0][0])][int(np.dot(np.transpose(m), lama_y)[0][0])] > LEVEL:
+                if int(np.dot(np.transpose(m), lama_x)[0][0]) >= len(rrt_agent.col_map) or int(np.dot(np.transpose(m), lama_x)[0][0]) < 0 or int(np.dot(np.transpose(m), lama_y)[0][0]) >= len(rrt_agent.col_map[0]) or int(np.dot(np.transpose(m), lama_y)[0][0]) < 0 or rrt_agent.col_map[int(round(np.dot(np.transpose(m), lama_x)[0][0]))][int(round(np.dot(np.transpose(m), lama_y)[0][0]))] > LEVEL:
                     print(np.dot(np.transpose(m), lama_x)[0][0])
                     print(np.dot(np.transpose(m), lama_y)[0][0])
                     print(rrt_agent.col_map[int(np.dot(np.transpose(m), lama_x)[
