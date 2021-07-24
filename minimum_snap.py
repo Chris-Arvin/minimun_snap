@@ -105,18 +105,39 @@ class minimum_snap:
         # print('-' * 60)
 
     # 计算Q_length
+    # def def_Q_length(self):
+    #     self.Q_length = np.zeros([k * (n + 1), k * (n + 1)])
+    #     for i in range(k*(n+1)):
+    #         if i==0:
+    #             self.Q_length[i][i] = 1
+    #             self.Q_length[i][i+1] = -1
+    #         elif i ==k*(n+1)-1:
+    #             self.Q_length[i][i-1] = -1
+    #         else:
+    #             self.Q_length[i][i] = 2
+    #             self.Q_length[i][i-1] = -1
+    #             self.Q_length[i][i+1] = -1
+
     def def_Q_length(self):
-        self.Q_length = np.zeros([k * (n + 1), k * (n + 1)])
-        for i in range(k*(n+1)):
+        Q_length = np.zeros([k , k ])
+        for i in range(k):
             if i==0:
-                self.Q_length[i][i] = 1
-                self.Q_length[i][i+1] = -1
-            elif i ==k*(n+1)-1:
-                self.Q_length[i][i-1] = -1
+                Q_length[i][i] = 1
+                Q_length[i][i+1] = -1
+            elif i == k-1:
+                Q_length[i][i-1] = -1
             else:
-                self.Q_length[i][i] = 2
-                self.Q_length[i][i-1] = -1
-                self.Q_length[i][i+1] = -1
+                Q_length[i][i] = 2
+                Q_length[i][i-1] = -1
+                Q_length[i][i+1] = -1
+
+        temp_a = np.zeros([k,k*(n+1)])
+        for j in range(k):
+            for i in range(n + 1):
+                temp_a[j][i + j * (n + 1)] = self.t_to[j] ** i
+        
+        self.Q_length = np.dot(np.dot(temp_a.T,Q_length),temp_a) 
+
 
     # 起点终点的x v a的限制和中间点的x限制,这个是等式后面的部分.
     # 前3+k-1+3是对应的值，剩下的部分是0
@@ -230,7 +251,7 @@ class minimum_snap:
         Q_curvature = matrix(self.Q_curvature)
         Q_length = matrix(self.Q_length)
         w1 = 1
-        w2 = 0
+        w2 = 1
         M = matrix(self.M)
         G = matrix(self.G)
 
@@ -242,6 +263,9 @@ class minimum_snap:
         print('-'*30)
         print(len(hx))
         print(hx)
+        print(np.linalg.matrix_rank(Q_curvature), len(self.Q_curvature))
+        print(np.linalg.matrix_rank(Q_length))
+        print(np.linalg.matrix_rank(w1*Q_curvature+w2*Q_length))
         result_x = solvers.qp(P=w1*Q_curvature+w2*Q_length, q=q, A=M, b=p_x, G=G, h=hx)
 
         p_y = matrix(self.p_y)
