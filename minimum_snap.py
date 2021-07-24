@@ -333,7 +333,6 @@ def draw():
             x[i+1]), int(y[i+1]), fill='red')
         canvas.update()
 
-
 def find_bounds(col_map, path_list):
     # 为每个路径点寻找边界
     temp_col_map = col_map.copy()
@@ -344,18 +343,10 @@ def find_bounds(col_map, path_list):
     print('-'*30, 'bound,l,r,u,d')
     for i, point in enumerate(path_list):
         if i == 0:
-            # temp_col_map[int(path_list[i+1][0])
-            #              ][int(path_list[i+1][1])] = LEVEL+1
             bound = find_bound(temp_col_map, path_list, point[0], point[1], 1)
         elif i == len(path_list)-1:
-            # temp_col_map[int(path_list[i-1][0])
-            #              ][int(path_list[i-1][1])] = LEVEL+1
             bound = find_bound(temp_col_map, path_list, point[0], point[1], 1)
         else:
-            # temp_col_map[int(path_list[i-1][0])
-            #              ][int(path_list[i-1][1])] = LEVEL+1
-            # temp_col_map[int(path_list[i+1][0])
-            #              ][int(path_list[i+1][1])] = LEVEL+1
             bound = find_bound(temp_col_map, path_list, point[0], point[1], 0)
         print(point, '; ', bound)
         lefts.append(bound[0])
@@ -371,59 +362,60 @@ def find_bound(col_map, path_list, px, py, endpoint=0):
     if endpoint == 1:
         max_setoff = 0
     # 初始化bounds
-    up = int(py)
-    down = int(py)
-    left = int(px)
-    right = int(px)
-    
+    up = py
+    down = py
+    left = px
+    right = px
+
     flag_l=1
     flag_r=1
     flag_u=1
     flag_d=1
     for i in range(max_setoff):
         if flag_l:
-            for yi in range(int(down),int(up+1)):
+            for yi in range(int(round(down)),int(round(up+1))):
                 if left-1<0:
                     break
-                if col_map[int(left-1)][yi] > LEVEL:
-                    left -=0.5
+                if col_map[int(round(left-1))][yi] > LEVEL:
+                    # left -=0.5
                     flag_l = 0
                     break
             else:
                 left -= 1
         
         if flag_u:
-            for xi in range(int(left),int(right+1)):
+            for xi in range(int(round(left)),int(round(right+1))):
                 if up+1>=len(col_map):
                     break
-                if col_map[xi][int(up+1)] > LEVEL:
-                    up+=0.5
+                if col_map[xi][int(round(up+1))] > LEVEL:
+                    # up+=0.5
                     flag_u = 0
                     break
             else:
                 up += 1
         
         if flag_r:
-            for yi in range(int(down), int(up+1)):
+            for yi in range(int(round(down)), int(round(up+1))):
                 if right+1>=len(col_map[0]):
                     break
-                if col_map[int(right+1)][yi] > LEVEL:
-                    right+=0.5
+                if col_map[int(round(right+1))][yi] > LEVEL:
+                    # right+=0.5
                     flag_r = 0
                     break
             else:
                 right += 1
         
         if flag_d:
-            for xi in range(int(left), int(right+1)):
+            for xi in range(int(round(left)), int(round(right+1))):
                 if down-1<0:
                     break
-                if col_map[xi][int(down-1)] > LEVEL:
-                    down-=0.5
+                if col_map[xi][int(round(down-1))] > LEVEL:
+                    # down-=0.5
                     flag_d = 0
                     break
             else:
                 down -= 1
+  
 
     # 点的相对位置方向不应该发生改变
     for p in path_list:
