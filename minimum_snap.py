@@ -373,10 +373,10 @@ def find_bound(col_map, path_list, px, py, endpoint=0):
     if endpoint == 1:
         max_setoff = 0
     # 初始化bounds
-    up = int(py+max_setoff)
-    down = int(py-max_setoff)
-    left = int(px-max_setoff)
-    right = int(px+max_setoff)
+    up = int(py)
+    down = int(py)
+    left = int(px)
+    right = int(px)
 
     for i in range(max_setoff):
         for yi in range(down,up+1):
