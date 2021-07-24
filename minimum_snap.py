@@ -52,6 +52,7 @@ class minimum_snap:
                 self.G[i+len(self.t_to)-2][j] = -self.G[i][j]
 
         # 找到bounds
+        global lefts, rights, ups, downs
         lefts, rights, ups, downs = find_bounds(rrt_agent.col_map, path_list)
         self.hx = np.zeros([(len(self.t_to)-2)*2, 1])
         self.hy = np.zeros([(len(self.t_to)-2)*2, 1])
@@ -229,7 +230,7 @@ class minimum_snap:
         Q_curvature = matrix(self.Q_curvature)
         Q_length = matrix(self.Q_length)
         w1 = 1
-        w2 = 1
+        w2 = 0
         M = matrix(self.M)
         G = matrix(self.G)
 
@@ -321,6 +322,10 @@ def draw():
         canvas.create_rectangle(final_waypoints[i][0] - 2, final_waypoints[i][1] - 2, final_waypoints[i][0] + 2,
                                 final_waypoints[i][1] + 2,
                                 fill='red')
+    
+    global lefts, rights, ups, downs
+    for i in range(len(lefts)):
+        canvas.create_rectangle(lefts[i], downs[i], rights[i], ups[i])
 
     print("original waypoints: ", path_list)
     print("adjusted waypoints: ", final_waypoints)
@@ -341,18 +346,18 @@ def find_bounds(col_map, path_list):
     print('-'*30, 'bound,l,r,u,d')
     for i, point in enumerate(path_list):
         if i == 0:
-            temp_col_map[int(path_list[i+1][0])
-                         ][int(path_list[i+1][1])] = LEVEL+1
+            # temp_col_map[int(path_list[i+1][0])
+            #              ][int(path_list[i+1][1])] = LEVEL+1
             bound = find_bound(temp_col_map, path_list, point[0], point[1], 1)
         elif i == len(path_list)-1:
-            temp_col_map[int(path_list[i-1][0])
-                         ][int(path_list[i-1][1])] = LEVEL+1
+            # temp_col_map[int(path_list[i-1][0])
+            #              ][int(path_list[i-1][1])] = LEVEL+1
             bound = find_bound(temp_col_map, path_list, point[0], point[1], 1)
         else:
-            temp_col_map[int(path_list[i-1][0])
-                         ][int(path_list[i-1][1])] = LEVEL+1
-            temp_col_map[int(path_list[i+1][0])
-                         ][int(path_list[i+1][1])] = LEVEL+1
+            # temp_col_map[int(path_list[i-1][0])
+            #              ][int(path_list[i-1][1])] = LEVEL+1
+            # temp_col_map[int(path_list[i+1][0])
+            #              ][int(path_list[i+1][1])] = LEVEL+1
             bound = find_bound(temp_col_map, path_list, point[0], point[1], 0)
         print(point, '; ', bound)
         lefts.append(bound[0])
@@ -363,79 +368,66 @@ def find_bounds(col_map, path_list):
 
 
 def find_bound(col_map, path_list, px, py, endpoint=0):
-    max_setoff = 20
+    max_setoff = 10
     # 起点和终点 不允许移动
     if endpoint == 1:
         max_setoff = 0
     # 初始化bounds
-    up = py - max_setoff
-    down = py+max_setoff
-    left = px-max_setoff
-    right = px+max_setoff
-    # 向内缩减bounds
-    for i in range(0, int(max_setoff)):
-        j = max_setoff-i
-        # 边界约束
-        if py-j >= 0:
-            for i in range(-int(max_setoff/2), int(max_setoff/2)+1):
-                # 边界约束
-                if px+i < 0:
-                    up = 0
-                    continue
-                if px+i >= len(col_map):
-                    up = len(col_map)-1
-                    continue
-                if col_map[int(round(px+i))][int(round(py+j))] > LEVEL:
-                    # 如果有碰撞，则bounds大小一定小于j
-                    up = py+(j-1)
-                    break
-        if py+j < len(col_map[0]):
-            for i in range(-int(max_setoff/2), int(max_setoff/2)+1):
-                if px+i < 0:
-                    down = 0
-                    continue
-                if px+i >= len(col_map):
-                    down = len(col_map)-1
-                    continue
-                if col_map[int(round(px+i))][int(round(py-j))] > LEVEL:
-                    down = py - (j-1)
-                    break
+    up = int(py+max_setoff)
+    down = int(py-max_setoff)
+    left = int(px-max_setoff)
+    right = int(px+max_setoff)
 
-        if px-j >= 0:
-            for i in range(-int(max_setoff/2), int(max_setoff/2)+1):
-                if px+i < 0:
-                    left = 0
-                    continue
-                if px+i >= len(col_map[0]):
-                    left = len(col_map[0])-1
-                    continue
-                if col_map[int(round(px-j))][int(round(py+i))] > LEVEL:
-                    left = px-(j-1)
-                    break
+    for i in range(max_setoff):
+        for yi in range(down,up+1):
+            if col_map[left-1][yi] > LEVEL:
+                break
+        else:
+            left -= 1
+        
+        for xi in range(left,right+1):
+            if col_map[xi][up+1] > LEVEL:
+                break
+        else:
+            up += 1
+        
+        for yi in range(down, up+1):
+            if col_map[right+1][yi] > LEVEL:
+                break
+        else:
+            right += 1
+        
+        for xi in range(left, right+1):
+            if col_map[xi][down-1] > LEVEL:
+                break
+        else:
+            down -= 1
+  
 
-        if px+j < len(col_map):
-            for i in range(-int(max_setoff/2), int(max_setoff/2)+1):
-                if px+i < 0:
-                    right = 0
-                    continue
-                if px+i >= len(col_map[0]):
-                    right = len(col_map[0])-1
-                    continue
-                if col_map[int(round(px+j))][int(round(py+i))] > LEVEL:
-                    right = px+(j-1)
-                    break
     # 点的相对位置方向不应该发生改变
     for p in path_list:
         if p[0] == px and p[1] == py:
             continue
-        if p[0] > left and p[0] <= px:
+        if p[0] > left and p[0] <= px and p[1]>down and p[1]<=py:
             left = p[0]
-        if p[0] < right and p[0] >= px:
-            right = p[0]
-        if p[1] > up and p[1] <= py:
-            up = p[1]
-        if p[1] < down and p[1] >= py:
             down = p[1]
+        
+        if p[0] > left and p[0] <= px and p[1]<up and p[1]>=py:
+            left = p[0]
+            up = p[1]
+        
+        if p[0]<right and p[0]>=px and p[1]>down and p[1]<=py:
+            right = p[0]
+            down = p[1]
+
+        if p[0]<right and p[0]>=px and p[1]<up and p[1]>=py:
+            right = p[0]
+            up = p[1]
+
+    left = max(0,left)
+    right = min(len(col_map),right)
+    up = min(len(col_map[0]),up)
+    down = max(0,down)
 
     return [left, right, up, down]
 
@@ -456,9 +448,9 @@ if __name__ == '__main__':
     window.title('rrt')
     window.geometry('%dx%d' % (800, 900))
     canvas = tk.Canvas(window, bg='white', height=800, width=800)
-    b = tk.Button(window, text='draw', command=draw)
+    # b = tk.Button(window, text='draw', command=draw)
     canvas.place(x=0, y=0, anchor='nw')
-    b.place(x=400, y=850, anchor='nw')
+    # b.place(x=400, y=850, anchor='nw')
 
     while True:
         k = len(path_list) - 1
@@ -466,5 +458,6 @@ if __name__ == '__main__':
         is_success, path_list = Fig_class.figure_out()
         if is_success:
             break
+    draw()
 
     window.mainloop()
