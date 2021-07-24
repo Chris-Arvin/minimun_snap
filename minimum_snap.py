@@ -94,12 +94,14 @@ class minimum_snap:
     # 计算全部的Q(目标函数中的Q)
     def def_Q_curvature(self):
         self.Q_curvature = np.zeros([k * (n + 1), k * (n + 1)])
+        '''
         for i in range(k):
             q_temp = self.Q_temp(index=i + 1, length=6)
             num_q = i * (n + 1)
             for j in range(n + 1):
                 for u in range(n + 1):
                     self.Q_curvature[num_q + j][num_q + u] = q_temp[j][u]  # 对角线那种添加
+        '''
         # print('Q_curvature is done:')
         # print(self.Q_curvature.shape)
         # print('-' * 60)
