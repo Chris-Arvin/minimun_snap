@@ -256,8 +256,8 @@ class minimum_snap:
                 m[3 + t_a * 6] = j ** 3
                 m[4 + t_a * 6] = j ** 4
                 m[5 + t_a * 6] = j ** 5
-                self.x.append(np.dot(np.transpose(m), lama_x)[0][0])
-                self.y.append(np.dot(np.transpose(m), lama_y)[0][0])
+                x.append(np.dot(np.transpose(m), lama_x)[0][0])
+                y.append(np.dot(np.transpose(m), lama_y)[0][0])
 
                 x.append(np.dot(np.transpose(m), lama_x)[0][0])
                 y.append(np.dot(np.transpose(m), lama_y)[0][0])
