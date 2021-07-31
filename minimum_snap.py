@@ -220,16 +220,16 @@ class minimum_snap:
 
     def figure_out(self):
         q = np.zeros([len(self.Q_all), 1])
-        q = matrix(q)
-        Q_all = matrix(self.Q_all)
-        M = matrix(self.M)
-        G = matrix(self.G)
-        p_x = matrix(self.p_x)
-        hx = matrix(self.hx)
+        q = matrix(np.array(q))
+        Q_all = matrix(np.array(self.Q_all))
+        M = matrix(np.array(self.M))
+        G = matrix(np.array(self.G))
+        p_x = matrix(np.array(self.p_x))
+        hx = matrix(np.array(self.hx))
         result_x = solvers.qp(P=Q_all, q=q, A=M, b=p_x, G=G, h=hx)
 
-        p_y = matrix(self.p_y)
-        hy = matrix(self.hy)
+        p_y = matrix(np.array(self.p_y))
+        hy = matrix(np.array(self.hy))
         result_y = solvers.qp(P=Q_all, q=q, A=M, b=p_y, G=G, h=hy)
 
         lama_x = result_x['x']
