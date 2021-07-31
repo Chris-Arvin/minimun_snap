@@ -234,16 +234,16 @@ class minimum_snap:
 
     def figure_out(self):
         q = np.zeros([len(self.Q_curvature), 1])
-        q = matrix(q)
-        Q_curvature = matrix(self.Q_curvature)
-        Q_length = matrix(self.Q_length)
+        q = matrix(np.array(q))
+        Q_curvature = matrix(np.array(self.Q_curvature))
+        Q_length = matrix(np.array(self.Q_length))
         w1 = 1
         w2 = 1
-        M = matrix(self.M)
-        G = matrix(self.G)
+        M = matrix(np.array(self.M))
+        G = matrix(np.array(self.G))
 
-        p_x = matrix(self.p_x)
-        hx = matrix(self.hx)
+        p_x = matrix(np.array(self.p_x))
+        hx = matrix(np.array(self.hx))
         print('-'*30)
         print(len(G))
         print(G)
@@ -252,8 +252,8 @@ class minimum_snap:
         print(hx)
         result_x = solvers.qp(P=w1*Q_curvature+w2*Q_length, q=q, A=M, b=p_x, G=G, h=hx)
 
-        p_y = matrix(self.p_y)
-        hy = matrix(self.hy)
+        p_y = matrix(np.array(self.p_y))
+        hy = matrix(np.array(self.hy))
         result_y = solvers.qp(P=w1*Q_curvature+w2*Q_length, q=q, A=M, b=p_y, G=G, h=hy)
 
         lama_x = result_x['x']
