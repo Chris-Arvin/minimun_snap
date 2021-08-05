@@ -53,7 +53,7 @@ class minimum_snap:
 
         # 找到bounds
         global lefts, rights, ups, downs
-        lefts, rights, ups, downs = find_bounds(rrt_agent.col_map, path_list)
+        lefts, rights, ups, downs = find_bounds(rrt_agent.col_map, self.path_list)
         self.hx = np.zeros([(len(self.t_to)-2)*2, 1])
         self.hy = np.zeros([(len(self.t_to)-2)*2, 1])
         # 前后面<=的，后面是>=的，注意正负号
